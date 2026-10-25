@@ -172,6 +172,7 @@ api.registerProvider({
     }
 });
 
+const handlersBeforePlayback = playHandlers.length;
 const mixedScreen = createComponent({ title: 'Mixed results movie', release_date: '2023-01-01' });
 assert.equal(api.getResults().length, 1, 'one failed provider must not remove successful results');
 assert.equal(api.getResults()[0].title, 'Shared result', 'duplicate URLs from one provider should be deduplicated');
