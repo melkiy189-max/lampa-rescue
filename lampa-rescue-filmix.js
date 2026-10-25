@@ -25,7 +25,7 @@
     }
 
     function normalize(value) {
-        return text(value).toLowerCase().replace(/[^a-zа-я0-9]/g, '');
+        return text(value).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/g, '');
     }
 
     function movieYear(movie) {
