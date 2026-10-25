@@ -352,10 +352,55 @@
         log('Core loaded:', VERSION, 'providers:', providers.length);
     }
 
-    if (window.appready) init();
-    else if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) {
-        Lampa.Listener.follow('app', function (event) {
-            if (event && event.type === 'ready') init();
+    /*
+     * Bootstrap defensively: some installers inject the extension before Lampa
+     * and jQuery are ready. A one-shot check here used to leave the plugin inert
+     * forever if the APIs appeared a little later.
+     */
+    var bootstrapTimer = null;
+    var appListenerBound = false;
+    var initComplete = false;
+
+    function bootstrap() {
+        if (initComplete) return;
+        if (!window.Lampa || !window.Lampa.Listener || !window.jQuery) {
+            if (!bootstrapTimer) {
+                bootstrapTimer = setInterval(function () {
+                    if (window.appready && window.Lampa && window.Lampa.Listener && window.jQuery) {
+                        clearInterval(bootstrapTimer);
+                        bootstrapTimer = null;
+                        init();
+                        initComplete = true;
+                    } else if (window.Lampa && window.Lampa.Listener && window.Lampa.Listener.follow && !appListenerBound) {
+                        bindAppReady();
+                    }
+                }, 250);
+            }
+            return;
+        }
+
+        if (window.appready) {
+            init();
+            initComplete = true;
+        } else {
+            bindAppReady();
+        }
+    }
+
+    function bindAppReady() {
+        if (appListenerBound || !window.Lampa || !window.Lampa.Listener || !window.Lampa.Listener.follow) return;
+        appListenerBound = true;
+        window.Lampa.Listener.follow('app', function (event) {
+            if (event && event.type === 'ready' && !initComplete) {
+                if (bootstrapTimer) {
+                    clearInterval(bootstrapTimer);
+                    bootstrapTimer = null;
+                }
+                init();
+                initComplete = true;
+            }
         });
     }
+
+    bootstrap();
 })();
