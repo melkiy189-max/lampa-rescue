@@ -184,6 +184,12 @@
         state.timer = setTimeout(function () {
             if (state.cancelled) return;
             state.cancelled = true;
+            if (state.providerTimers) {
+                state.providerTimers.forEach(function (timer) {
+                    clearTimeout(timer);
+                });
+                state.providerTimers = [];
+            }
             activeSearch = null;
             render('complete', {
                 results: currentResults.slice(),
