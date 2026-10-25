@@ -39,15 +39,22 @@ jobs:
           const filmix = fs.readFileSync('lampa-rescue-filmix.js', 'utf8');
           const bundle = fs.readFileSync('lampa-rescue-experimental-bundle.js', 'utf8');
 
-          for (const [name, source] of [
-            ['core', core],
-            ['bundle', bundle],
-          ]) {
+          for (const [name, source] of [['core', core], ['bundle', bundle]]) {
             assert.ok(source.includes('registerProvider'), name + ': provider registration API must remain');
-            assert.ok(source.includes('https?:\\\\/\\\\/'), name + ': HTTP(S) URL validation must remain');
+            assert.ok(source.includes('!/^https?:\\\\/\\\\//i.test(item.url)'), name + ': URL scheme guard must remain');
+            assert.ok(source.includes('var renderedResults = payload.results || [];'), name + ': result click handlers must use a render snapshot');
           }
 
-          assert.ok(filmix.includes('test(proxy)) return'), 'Filmix must reject non-HTTPS proxies');
+          assert.ok(filmix.includes("if (!/^https:\\\\/\\\\//i.test(proxy)) return '';"), 'Filmix must reject non-HTTPS proxies');
           assert.ok(filmix.includes("replace(/ё/g, 'е')"), 'Filmix title normalization must fold ё to е');
+
+          const coreMarker = '/* Lampa Rescue — aggregator core prototype';
+          const adapterMarker = '/*\n     * Lampa Rescue — Filmix adapter (experimental).';
+          const coreEnd = bundle.indexOf('})();');
+          assert.ok(bundle.startsWith('/* Lampa Rescue experimental bundle.'), 'bundle header must identify experimental status');
+          assert.ok(bundle.includes(coreMarker), 'bundle must contain core');
+          assert.ok(bundle.includes('Lampa Rescue — Filmix adapter (experimental).'), 'bundle must contain Filmix adapter');
+          assert.ok(bundle.indexOf('Lampa Rescue — Filmix adapter (experimental).') > bundle.indexOf(coreMarker), 'adapter must follow core');
+
           console.log('Critical static checks passed.');
           NODE
