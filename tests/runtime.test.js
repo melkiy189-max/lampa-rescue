@@ -202,8 +202,6 @@ assert.ok(notyMessages.some(function (message) {
 playerShouldThrow = false;
 mixedScreen.onDestroy();
 
-// Selecting a rendered result must launch its exact URL; player errors must be surfaced.
-const handlersBeforePlayback = playHandlers.length;
 // A timed-out provider must not erase a result from a provider that already succeeded.
 api.registerProvider({
     id: 'mock',
