@@ -29,6 +29,10 @@ jobs:
           node --check lampa-rescue-filmix.js
           node --check lampa-rescue-experimental-bundle.js
           node --check tests/check-source.js
+          node --check tests/runtime.test.js
 
       - name: Run static regression checks
         run: node tests/check-source.js
+
+      - name: Run runtime regression tests with mocked Lampa
+        run: node tests/runtime.test.js
