@@ -5,8 +5,9 @@
      * Lampa Rescue — Filmix adapter (experimental).
      * Uses the Filmix API shape exposed by the public Lampa Filmix extension.
      * It reuses only the user's existing Lampa Storage settings; it never asks
-     * for a password or sends tokens to any host other than the configured API
-     * proxy. This adapter currently emits movie links only, not series episodes.
+     * for a password. Any configured proxy can see request parameters, including
+     * the Filmix token, so do not use a proxy you do not trust. This adapter
+     * currently emits movie links only, not series episodes.
      */
 
     var PROVIDER_ID = 'filmix';
@@ -47,7 +48,7 @@
     }
 
     function apiBase() {
-        var proxy = Lampa.Storage.get('fxapi_proxy', 'https://cors.jacred.stream/');
+        var proxy = Lampa.Storage.get('fxapi_proxy', '');
         if (!proxy) return '';
         if (proxy.charAt(proxy.length - 1) !== '/') proxy += '/';
         return proxy + API_URL;
@@ -138,7 +139,7 @@
     function search(movie, done) {
         var title = text(movie && (movie.title || movie.name || movie.original_title || movie.original_name)).trim();
         if (!title) return done(null, []);
-        if (!apiBase()) return done(new Error('Filmix proxy is not configured'), []);
+        if (!apiBase()) return done(new Error('Filmix proxy is not configured; configure a trusted HTTPS proxy first'), []);
 
         request('search?story=' + encodeURIComponent(title), function (cards) {
             var card = matchCard(cards, movie, title);
