@@ -1,0 +1,53 @@
+name: Lampa Rescue checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-and-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check lampa-rescue.js
+          node --check lampa-rescue-core.js
+          node --check lampa-rescue-filmix.js
+          node --check lampa-rescue-experimental-bundle.js
+
+      - name: Check critical safety guards
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+
+          const core = fs.readFileSync('lampa-rescue-core.js', 'utf8');
+          const filmix = fs.readFileSync('lampa-rescue-filmix.js', 'utf8');
+          const bundle = fs.readFileSync('lampa-rescue-experimental-bundle.js', 'utf8');
+
+          for (const [name, source] of [
+            ['core', core],
+            ['bundle', bundle],
+          ]) {
+            assert.match(source, /https?:\\\\/i, name + ': HTTP(S) URL validation must remain');
+            assert.match(source, /registerProvider/, name + ': provider registration API must remain');
+          }
+
+          assert.match(filmix, /!\\/\\^https:\\\\/\\\\\\/i, 'Filmix must reject non-HTTPS proxies');
+          assert.match(filmix, /replace\\(\\/ё\\/g, 'е'\\)/, 'Filmix title normalization must fold ё to е');
+          console.log('Critical static checks passed.');
+          NODE
