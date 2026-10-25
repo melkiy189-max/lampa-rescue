@@ -122,4 +122,30 @@ assert.equal(api.getResults().length, 1, 'stale cancelled search must not overwr
 
 newScreen.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation.');
+// A failing provider must not erase results returned by another provider.
+api.registerProvider({
+    id: 'mock',
+    name: 'Mock source',
+    search: function () {
+        return [
+            { title: 'Shared result', url: 'https://example.test/shared.mp4' },
+            { title: 'Duplicate URL', url: 'https://example.test/shared.mp4' }
+        ];
+    }
+});
+api.registerProvider({
+    id: 'broken',
+    name: 'Broken source',
+    search: function (movie, done) {
+        done(new Error('simulated provider failure'), []);
+    }
+});
+
+const mixedScreen = createComponent({ title: 'Mixed results movie', release_date: '2023-01-01' });
+assert.equal(api.getResults().length, 1, 'one failed provider must not remove successful results');
+assert.equal(api.getResults()[0].title, 'Shared result', 'duplicate URLs from one provider should be deduplicated');
+assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Shared result'),
+    'successful result should still be rendered when another provider fails');
+mixedScreen.onDestroy();
+
+console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation, unsafe URL rejection, provider error isolation, URL deduplication.');
