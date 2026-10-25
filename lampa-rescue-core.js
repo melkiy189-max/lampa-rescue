@@ -291,6 +291,7 @@
     function openScreen(movie) {
         if (!window.Lampa || !Lampa.Activity || !Lampa.Component) return;
         Lampa.Activity.push({
+            url: '',
             component: COMPONENT,
             title: 'Lampa Rescue',
             movie: movie,
@@ -319,8 +320,8 @@
         }
         addStyles();
 
-        if (Lampa.Component && Lampa.Component.add && Lampa.Activity && Lampa.Scroll) {
-            Lampa.Component.add(COMPONENT, function (object) {
+        if (Lampa.Component && Lampa.Component.add && Lampa.Activity) {
+            if (!Lampa.Component.get || !Lampa.Component.get(COMPONENT)) Lampa.Component.add(COMPONENT, function (object) {
                 var self = this;
                 var movie = object && object.movie ? object.movie : currentMovie || {};
                 self.container = jQuery('<div class="lr-screen"></div>');
