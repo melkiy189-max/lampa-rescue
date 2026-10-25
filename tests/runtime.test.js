@@ -9,6 +9,8 @@ const source = fs.readFileSync('lampa-rescue-core.js', 'utf8');
 const callbacks = [];
 const componentFactories = {};
 const followHandlers = {};
+let componentAddCalls = 0;
+let listenerFollowCalls = 0;
 const contentNodes = [];
 const playHandlers = [];
 const playerCalls = [];
@@ -72,9 +74,9 @@ const window = {
     appready: true,
     jQuery,
     Lampa: {
-        Listener: { follow: function (name, callback) { followHandlers[name] = callback; } },
+        Listener: { follow: function (name, callback) { listenerFollowCalls++; followHandlers[name] = callback; } },
         Component: {
-            add: function (name, factory) { componentFactories[name] = factory; },
+            add: function (name, factory) { componentAddCalls++; componentFactories[name] = factory; },
             get: function () { return null; }
         },
         Activity: { push: function () {} },
@@ -103,6 +105,15 @@ const sandbox = {
     isNaN
 };
 vm.runInNewContext(source, sandbox, { timeout: 2000 });
+
+// Loading the same core script again must not register duplicate components or listeners.
+const initialComponentAddCalls = componentAddCalls;
+const initialListenerFollowCalls = listenerFollowCalls;
+const initialFactory = componentFactories.lampa_rescue_sources;
+vm.runInNewContext(source, sandbox, { timeout: 2000 });
+assert.equal(componentAddCalls, initialComponentAddCalls, 'second script load must not register a duplicate component');
+assert.equal(listenerFollowCalls, initialListenerFollowCalls, 'second script load must not bind duplicate listeners');
+assert.equal(componentFactories.lampa_rescue_sources, initialFactory, 'second script load must preserve the original component');
 
 const api = window.LampaRescue;
 assert.ok(api, 'core should initialise');
@@ -307,4 +318,4 @@ assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Источн
     'screen should explain that no sources are configured');
 noProvidersScreen.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state, exact playback handoff, player-error notification.');
+console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state, exact playback handoff, player-error notification, duplicate-load guard.');
