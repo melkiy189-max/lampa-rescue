@@ -147,7 +147,11 @@
         return currentResults.slice();
     };
 
-    function cancelSearch() {
+    function cancelSearch(expectedState) {
+        // A screen may be destroyed after another screen has started searching.
+        // Only cancel the search owned by that screen; a stale lifecycle event
+        // must not cancel a newer activity's request.
+        if (expectedState && activeSearch !== expectedState) return;
         if (!activeSearch) return;
         activeSearch.cancelled = true;
         if (activeSearch.timer) clearTimeout(activeSearch.timer);
@@ -178,7 +182,7 @@
 
         if (!enabled.length) {
             render('empty', { results: [], message: 'Источники пока не подключены.' });
-            return;
+            return state;
         }
 
         render('loading', { results: [], pending: enabled.length });
@@ -257,6 +261,7 @@
                 done(e, []);
             }
         });
+        return state;
     }
 
     function renderScreen(component, payload) {
@@ -358,16 +363,17 @@
                     return self.render();
                 };
                 self.render = function () { return self.container; };
+                self.searchState = null;
                 self.startSearch = function () {
-                    searchAll(movie, function (state, payload) {
+                    self.searchState = searchAll(movie, function (state, payload) {
                         payload.state = state;
                         renderScreen(self, payload);
                     });
                 };
-                self.onDestroy = function () { cancelSearch(); };
+                self.onDestroy = function () { cancelSearch(self.searchState); };
                 self.start = function () {};
-                self.stop = function () { cancelSearch(); };
-                self.destroy = function () { cancelSearch(); self.container.remove(); };
+                self.stop = function () { cancelSearch(self.searchState); };
+                self.destroy = function () { cancelSearch(self.searchState); self.container.remove(); };
             });
         }
 
