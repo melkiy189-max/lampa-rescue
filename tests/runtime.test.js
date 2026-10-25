@@ -193,4 +193,29 @@ assert.equal(api.getResults().length, 1, 'timed-out provider must not erase succ
 assert.equal(api.getResults()[0].title, 'Fast result survives timeout');
 timeoutScreen.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation.');
+// If providers finish without any usable result, the screen must show a clear empty state.
+api.registerProvider({
+    id: 'mock',
+    name: 'Invalid-only source',
+    search: function () {
+        return [
+            { title: 'Unsafe result', url: 'javascript:alert(1)' },
+            { title: 'No URL result', url: '' }
+        ];
+    }
+});
+api.registerProvider({
+    id: 'broken',
+    name: 'Failed source',
+    search: function (movie, done) {
+        done(new Error('simulated provider failure'), []);
+    }
+});
+
+const emptyScreen = createComponent({ title: 'No playable sources', release_date: '2021-01-01' });
+assert.equal(api.getResults().length, 0, 'invalid and failed results must not appear as playable options');
+assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Пока ничего не найдено'),
+    'screen should show the empty-results message when no usable sources remain');
+emptyScreen.onDestroy();
+
+console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state.');
