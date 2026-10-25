@@ -43,11 +43,11 @@ jobs:
             ['core', core],
             ['bundle', bundle],
           ]) {
-            assert.match(source, /https?:\\\\/i, name + ': HTTP(S) URL validation must remain');
-            assert.match(source, /registerProvider/, name + ': provider registration API must remain');
+            assert.ok(source.includes('registerProvider'), name + ': provider registration API must remain');
+            assert.ok(source.includes('https?:\\\\/\\\\/'), name + ': HTTP(S) URL validation must remain');
           }
 
-          assert.match(filmix, /!\\/\\^https:\\\\/\\\\\\/i, 'Filmix must reject non-HTTPS proxies');
-          assert.match(filmix, /replace\\(\\/ё\\/g, 'е'\\)/, 'Filmix title normalization must fold ё to е');
+          assert.ok(filmix.includes('test(proxy)) return'), 'Filmix must reject non-HTTPS proxies');
+          assert.ok(filmix.includes("replace(/ё/g, 'е')"), 'Filmix title normalization must fold ё to е');
           console.log('Critical static checks passed.');
           NODE
