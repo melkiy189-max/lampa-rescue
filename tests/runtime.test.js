@@ -10,6 +10,10 @@ const callbacks = [];
 const componentFactories = {};
 const followHandlers = {};
 const contentNodes = [];
+const playHandlers = [];
+const playerCalls = [];
+const notyMessages = [];
+let playerShouldThrow = false;
 const timers = new Map();
 let nextTimerId = 1;
 
@@ -50,7 +54,10 @@ function makeNode(selector) {
         text: function () { return this; },
         appendTo: function () { return this; },
         off: function () { return this; },
-        on: function () { return this; },
+        on: function (event, callback) {
+            if (this.selector === '.lr-source' && event === 'hover:enter') playHandlers.push(callback);
+            return this;
+        },
         first: function () { return this; },
         append: function () { return this; },
         remove: function () { this.removed = true; return this; },
@@ -71,8 +78,11 @@ const window = {
             get: function () { return null; }
         },
         Activity: { push: function () {} },
-        Player: { play: function () {} },
-        Noty: { show: function () {} }
+        Player: { play: function (payload) {
+            if (playerShouldThrow) throw new Error('simulated player failure');
+            playerCalls.push(payload);
+        } },
+        Noty: { show: function (message) { notyMessages.push(message); } }
     }
 };
 
@@ -167,8 +177,21 @@ assert.equal(api.getResults().length, 1, 'one failed provider must not remove su
 assert.equal(api.getResults()[0].title, 'Shared result', 'duplicate URLs from one provider should be deduplicated');
 assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Shared result'),
     'successful result should still be rendered when another provider fails');
+assert.ok(playHandlers.length > handlersBeforePlayback, 'rendered result should have a selection handler');
+playHandlers[playHandlers.length - 1]();
+assert.equal(playerCalls.length, 1, 'selecting a result should invoke the player');
+assert.equal(playerCalls[0].url, 'https://example.test/shared.mp4', 'player should receive the exact selected URL');
+
+playerShouldThrow = true;
+playHandlers[playHandlers.length - 1]();
+assert.ok(notyMessages.some(function (message) {
+    return message.includes('не удалось запустить');
+}), 'player launch failure should show a user-facing notification');
+playerShouldThrow = false;
 mixedScreen.onDestroy();
 
+// Selecting a rendered result must launch its exact URL; player errors must be surfaced.
+const handlersBeforePlayback = playHandlers.length;
 // A timed-out provider must not erase a result from a provider that already succeeded.
 api.registerProvider({
     id: 'mock',
@@ -283,4 +306,4 @@ assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Источн
     'screen should explain that no sources are configured');
 noProvidersScreen.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state.');
+console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state, exact playback handoff, player-error notification.');
