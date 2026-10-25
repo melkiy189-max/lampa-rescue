@@ -102,6 +102,9 @@
             play: typeof raw.play === 'function' ? raw.play : null,
             raw: raw
         };
+        // Never pass non-web schemes (for example javascript:) to the player.
+        // A provider may instead supply a trusted play() handler.
+        if (item.url && !/^https?:\/\//i.test(item.url)) return null;
         if (!item.url && !item.play) return null;
         return item;
     }
