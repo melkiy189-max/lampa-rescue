@@ -17,6 +17,12 @@ for (const [name, source] of [['core', core], ['bundle', bundle]]) {
         name + ': rendered result snapshot');
     assert.ok(source.includes('if (state.cancelled) return;'),
         name + ': cancelled search callback guard');
+    assert.ok(source.includes('function cancelSearch(expectedState)'),
+        name + ': cancellation must be scoped to an owning search state');
+    assert.ok(source.includes('cancelSearch(self.searchState)'),
+        name + ': component teardown must cancel only its own search');
+    assert.ok(source.includes('return state;'),
+        name + ': searchAll must return its state to the component');
 }
 
 assert.ok(filmix.includes('if (!/^https:') && filmix.includes('.test(proxy)) return'),
