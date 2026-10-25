@@ -10,6 +10,27 @@ const callbacks = [];
 const componentFactories = {};
 const followHandlers = {};
 const contentNodes = [];
+const timers = new Map();
+let nextTimerId = 1;
+
+function fakeSetTimeout(callback, delay) {
+    const id = nextTimerId++;
+    timers.set(id, { callback, delay, active: true });
+    return id;
+}
+
+function fakeClearTimeout(id) {
+    timers.delete(id);
+}
+
+function runTimerWithDelay(delay) {
+    const entry = Array.from(timers.entries()).find(function (pair) {
+        return pair[1].delay === delay;
+    });
+    assert.ok(entry, 'expected a scheduled timer with delay ' + delay);
+    timers.delete(entry[0]);
+    entry[1].callback();
+}
 
 function makeNode(selector) {
     return {
@@ -60,10 +81,10 @@ const sandbox = {
     Lampa: window.Lampa,
     jQuery,
     console: { log: function () {} },
-    setTimeout,
-    clearTimeout,
-    setInterval,
-    clearInterval,
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
+    setInterval: fakeSetTimeout,
+    clearInterval: fakeClearTimeout,
     Math,
     Array,
     String,
@@ -148,4 +169,28 @@ assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Shared resul
     'successful result should still be rendered when another provider fails');
 mixedScreen.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation, unsafe URL rejection, provider error isolation, URL deduplication.');
+// A timed-out provider must not erase a result from a provider that already succeeded.
+api.registerProvider({
+    id: 'mock',
+    name: 'Fast source',
+    search: function () {
+        return [{ title: 'Fast result survives timeout', url: 'https://example.test/fast.mp4' }];
+    }
+});
+api.registerProvider({
+    id: 'broken',
+    name: 'Hanging source',
+    search: function () {
+        // Deliberately never calls done().
+    }
+});
+
+const timeoutScreen = createComponent({ title: 'Timeout movie', release_date: '2022-01-01' });
+assert.equal(api.getResults().length, 1, 'fast provider result should be visible before timeout');
+assert.equal(api.getResults()[0].title, 'Fast result survives timeout');
+runTimerWithDelay(11500);
+assert.equal(api.getResults().length, 1, 'timed-out provider must not erase successful results');
+assert.equal(api.getResults()[0].title, 'Fast result survives timeout');
+timeoutScreen.onDestroy();
+
+console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation.');
