@@ -64,35 +64,37 @@
                         '<div style="font-size:1.5em;margin-bottom:.5em;">Тест встроенных плееров</div>' +
                         '<div style="opacity:.8;margin-bottom:1em;">Lampa Rescue ' + VERSION +
                         '. Вставь ссылку на публичное видео RUTUBE или VK Видео.</div>' +
-                        '<input class="lr-host-url" type="text" placeholder="Ссылка на видео" ' +
-                        'style="width:95%;padding:.8em;font-size:1em;color:#111;background:#fff;" />' +
+                        '<div class="lr-host-url" style="padding:1em;background:rgba(255,255,255,.12);margin:.5em 0;">Ссылка не задана</div>' +
+                        '<div class="selector lr-host-enter" style="margin-top:1em;padding:1em;background:rgba(255,255,255,.12);">Ввести ссылку с клавиатуры Lampa</div>' +
                         '<div style="margin:1em 0;opacity:.8;">Для VK нужна ссылка video_ext.php с параметрами oid, id и hash. Обычная ссылка на ролик пока не поддерживается.</div>' +
                         '<div class="lr-host-error" style="color:#ffb4a9;margin:.5em 0;"></div>' +
                         '<div class="lr-host-player" style="width:100%;"></div>'
                     );
-                    self.container.find('.lr-host-url').on('keydown', function (e) {
-                        if (e.keyCode === 13) self.tryPlay();
-                    });
-                    self.container.find('.lr-host-url').on('hover:enter', function () {
-                        if (Lampa.Input && Lampa.Input.edit) Lampa.Input.edit({
+                    self.urlValue = '';
+                    self.container.find('.lr-host-enter').on('hover:enter', function () {
+                        if (!Lampa.Input || !Lampa.Input.edit) {
+                            self.container.find('.lr-host-error').text('В этой сборке Lampa не найдена экранная клавиатура.');
+                            return;
+                        }
+                        Lampa.Input.edit({
                             title: 'Ссылка на публичное видео',
-                            value: jQuery(this).val(),
+                            value: self.urlValue,
                             free: true,
                             nomask: true,
                             onBack: function () {},
                             onSelect: function (value) {
-                                jQuery('.lr-host-url').val(value);
+                                self.urlValue = String(value || '');
+                                self.container.find('.lr-host-url').text(self.urlValue || 'Ссылка не задана');
                             }
                         });
                     });
-                    self.container.find('.lr-host-url').addClass('selector');
                     self.container.append('<div class="selector lr-host-open" style="margin-top:1em;padding:1em;background:rgba(255,255,255,.12);">Открыть встроенный плеер</div>');
                     self.container.find('.lr-host-open').on('hover:enter', function () { self.tryPlay(); });
                     return self.render();
                 };
                 self.render = function () { return self.container; };
                 self.tryPlay = function () {
-                    var parsed = parseHostUrl(self.container.find('.lr-host-url').val());
+                    var parsed = parseHostUrl(self.urlValue);
                     var frame;
                     if (!parsed) {
                         self.container.find('.lr-host-error').text('Ссылка не распознана. Нужна ссылка на видео RUTUBE или VK video_ext.php с oid, id и hash.');
