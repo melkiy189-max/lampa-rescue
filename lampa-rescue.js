@@ -113,14 +113,31 @@
         lastStart = null;
     }
 
-    function init() {
-        if (window.__lampa_rescue_initialized__) return;
-        window.__lampa_rescue_initialized__ = true;
+    var initAttempts = 0;
+    var initTimer = null;
 
+    function init() {
+        if (window.__lampa_rescue_initialized__) return true;
+
+        // On older TV builds, app-ready can fire before PlayerVideo is available.
+        // Retry briefly instead of permanently marking the plugin initialized too early.
         if (!Lampa.Player || !Lampa.Player.listener || !Lampa.PlayerVideo || !Lampa.PlayerVideo.listener) {
-            console.warn('[' + PLUGIN + '] Lampa player API is unavailable; plugin not initialized.');
-            return;
+            initAttempts++;
+            if (initAttempts === 1) {
+                console.warn('[' + PLUGIN + '] Lampa player API is not ready yet; waiting briefly.');
+            }
+            if (initAttempts < 80 && !initTimer && typeof window.setTimeout === 'function') {
+                initTimer = window.setTimeout(function () {
+                    initTimer = null;
+                    init();
+                }, 250);
+            } else if (initAttempts >= 80) {
+                saveLog('plugin_init_failed', { message: 'Lampa player API unavailable after retries' });
+            }
+            return false;
         }
+
+        window.__lampa_rescue_initialized__ = true;
 
         Lampa.Player.listener.follow('start', onPlayerStart);
         Lampa.Player.listener.follow('destroy', onPlayerDestroy);
@@ -132,6 +149,7 @@
 
         saveLog('plugin_ready', { version: VERSION });
         console.log('[' + PLUGIN + '] ' + VERSION + ' loaded');
+        return true;
     }
 
     if (window.appready) {
