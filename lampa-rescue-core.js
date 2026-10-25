@@ -241,9 +241,9 @@
         });
     }
 
-    function renderScreen(event, payload) {
-        if (!event || !event.activity || !event.activity.render) return;
-        var root = jQuery(event.activity.render());
+    function renderScreen(component, payload) {
+        if (!component || !component.container) return;
+        var root = component.container;
         var content = root.find('.lr-content');
         if (!content.length) return;
 
@@ -320,29 +320,30 @@
         addStyles();
 
         if (Lampa.Component && Lampa.Component.add && Lampa.Activity && Lampa.Scroll) {
-            Lampa.Component.add(COMPONENT, function () {
+            Lampa.Component.add(COMPONENT, function (object) {
                 var self = this;
-                var movie = this.movie || currentMovie || {};
-                this.create = function () {
-                    var html = '<div class="lr-screen"><div class="lr-heading">Доступные источники</div>';
+                var movie = object && object.movie ? object.movie : currentMovie || {};
+                self.container = jQuery('<div class="lr-screen"></div>');
+                self.create = function () {
+                    var html = '<div class="lr-heading">Доступные источники</div>';
                     html += '<div class="lr-subtitle">' + esc(movieTitle(movie)) + (movieYear(movie) ? ' · ' + esc(movieYear(movie)) : '') + '</div>';
                     html += '<div class="lr-toolbar"><span class="lr-count">Lampa Rescue ' + VERSION + '</span><span class="lr-source-detail">Единый список источников</span></div>';
-                    html += '<div class="lr-content"><div class="lr-empty">Подготовка поиска…</div></div></div>';
-                    self.render = jQuery(html);
-                    self.activity.loader(false);
-                    self.activity.toggle();
+                    html += '<div class="lr-content"><div class="lr-empty">Подготовка поиска…</div></div>';
+                    self.container.html(html);
                     self.startSearch();
-                    return self.render;
+                    return self.render();
                 };
-                this.startSearch = function () {
+                self.render = function () { return self.container; };
+                self.startSearch = function () {
                     searchAll(movie, function (state, payload) {
                         payload.state = state;
                         renderScreen(self, payload);
                     });
                 };
-                this.onDestroy = function () { cancelSearch(); };
-                this.start = function () {};
-                
+                self.onDestroy = function () { cancelSearch(); };
+                self.start = function () {};
+                self.stop = function () { cancelSearch(); };
+                self.destroy = function () { cancelSearch(); self.container.remove(); };
             });
         }
 
