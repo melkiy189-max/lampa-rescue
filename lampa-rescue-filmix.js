@@ -48,8 +48,12 @@
     }
 
     function apiBase() {
-        var proxy = Lampa.Storage.get('fxapi_proxy', '');
+        var proxy = text(Lampa.Storage.get('fxapi_proxy', '')).trim();
         if (!proxy) return '';
+
+        // The query includes the user's Filmix token. Refuse a plain-HTTP
+        // proxy so credentials are not sent over an unencrypted connection.
+        if (!/^https:\/\//i.test(proxy)) return '';
         if (proxy.charAt(proxy.length - 1) !== '/') proxy += '/';
         return proxy + API_URL;
     }
