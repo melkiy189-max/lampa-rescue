@@ -260,4 +260,27 @@ assert.equal(api.getResults().length, 1, 'late results from previous searches mu
 assert.equal(api.getResults()[0].title, 'Movie C result');
 screenC.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state.');
+// When every provider is disabled, show a setup hint instead of a misleading search result.
+api.registerProvider({
+    id: 'mock',
+    name: 'Disabled mock source',
+    enabled: false,
+    search: function () {
+        throw new Error('disabled provider must not be called');
+    }
+});
+api.registerProvider({
+    id: 'broken',
+    name: 'Disabled second source',
+    enabled: false,
+    search: function () {
+        throw new Error('disabled provider must not be called');
+    }
+});
+const noProvidersScreen = createComponent({ title: 'No providers enabled', release_date: '2020-01-01' });
+assert.equal(api.getResults().length, 0, 'disabled providers must not generate results');
+assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Источники ещё не подключены'),
+    'screen should explain that no sources are configured');
+noProvidersScreen.onDestroy();
+
+console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state.');
