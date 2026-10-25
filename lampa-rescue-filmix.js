@@ -140,7 +140,7 @@
         if (!title) return done(null, []);
         if (!apiBase()) return done(new Error('Filmix proxy is not configured'), []);
 
-        request('search&story=' + encodeURIComponent(title), function (cards) {
+        request('search?story=' + encodeURIComponent(title), function (cards) {
             var card = matchCard(cards, movie, title);
             if (!card || !card.id) return done(null, []);
 
