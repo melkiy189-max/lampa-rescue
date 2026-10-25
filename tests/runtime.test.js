@@ -103,9 +103,15 @@ assert.equal(callbacks.length, 2, 'second screen should start a new provider req
 
 // Destroying the older screen must not cancel the newer screen's active request.
 oldScreen.onDestroy();
-callbacks[1].done(null, [{ title: 'New movie result', url: 'https://example.test/new.mp4' }]);
-assert.equal(api.getResults().length, 1, 'new search result should survive old screen teardown');
+callbacks[1].done(null, [
+    { title: 'New movie result', url: 'https://example.test/new.mp4' },
+    { title: 'JavaScript scheme must be rejected', url: 'javascript:alert(1)' },
+    { title: 'File scheme must be rejected', url: 'file:///etc/passwd' },
+    { title: 'Missing URL must be rejected', url: '' }
+]);
+assert.equal(api.getResults().length, 1, 'new result survives old screen teardown and unsafe URLs are rejected');
 assert.equal(api.getResults()[0].title, 'New movie result');
+assert.equal(api.getResults()[0].url, 'https://example.test/new.mp4', 'only the valid HTTPS result is kept');
 
 const countAfterFirstCallback = api.getResults().length;
 callbacks[1].done(null, [{ title: 'Duplicate callback', url: 'https://example.test/second.mp4' }]);
