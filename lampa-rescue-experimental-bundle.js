@@ -493,27 +493,49 @@
     }
 
     function request(path, callback, fail) {
-        var network = new Lampa.Reguest();
+        var network;
         var settled = false;
-        var timer = setTimeout(function () {
-            if (settled) return;
-            settled = true;
-            network.clear();
-            fail(new Error('Filmix request timeout'));
-        }, WAIT_MS);
+        var timer = null;
 
-        network.timeout(WAIT_MS - 500);
-        network.silent(addQuery(apiBase() + path, deviceParams()), function (data) {
+        function finishError(error) {
             if (settled) return;
             settled = true;
-            clearTimeout(timer);
-            callback(data);
-        }, function (a, b) {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            fail(new Error(network.errorDecode ? network.errorDecode(a, b) : 'Filmix request failed'));
-        });
+            if (timer) clearTimeout(timer);
+            fail(error instanceof Error ? error : new Error(text(error || 'Filmix request failed')));
+        }
+
+        try {
+            if (!Lampa.Reguest) throw new Error('Lampa.Reguest is unavailable');
+            network = new Lampa.Reguest();
+            if (!network || typeof network.silent !== 'function') {
+                throw new Error('Lampa.Reguest.silent is unavailable');
+            }
+
+            timer = setTimeout(function () {
+                if (settled) return;
+                settled = true;
+                if (network && typeof network.clear === 'function') network.clear();
+                fail(new Error('Filmix request timeout'));
+            }, WAIT_MS);
+
+            if (typeof network.timeout === 'function') network.timeout(WAIT_MS - 500);
+            network.silent(addQuery(apiBase() + path, deviceParams()), function (data) {
+                if (settled) return;
+                settled = true;
+                if (timer) clearTimeout(timer);
+                callback(data);
+            }, function (a, b) {
+                var message = 'Filmix request failed';
+                try {
+                    if (network && typeof network.errorDecode === 'function') {
+                        message = network.errorDecode(a, b) || message;
+                    }
+                } catch (e) {}
+                finishError(message);
+            });
+        } catch (error) {
+            finishError(error);
+        }
     }
 
     function matchCard(cards, movie, query) {
