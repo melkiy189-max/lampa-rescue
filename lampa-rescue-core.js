@@ -290,12 +290,16 @@
         }
         content.html(html);
 
+        // Bind each rendered list to its own snapshot. A later search or a
+        // second activity must not make an old row play another result by index.
+        var renderedResults = payload.results || [];
+        var renderedMovie = component.movie || currentMovie;
         content.find('.lr-source').off('hover:enter').on('hover:enter', function () {
             var index = parseInt(jQuery(this).attr('data-lr-index'), 10);
-            var item = currentResults[index];
+            var item = renderedResults[index];
             if (!item) return;
             try {
-                if (item.play) item.play(item.raw, currentMovie);
+                if (item.play) item.play(item.raw, renderedMovie);
                 else if (item.url && Lampa.Player && Lampa.Player.play) {
                     Lampa.Player.play({ url: item.url, title: item.title, quality: item.quality, subtitles: item.subtitles });
                 }
@@ -342,6 +346,7 @@
             if (!Lampa.Component.get || !Lampa.Component.get(COMPONENT)) Lampa.Component.add(COMPONENT, function (object) {
                 var self = this;
                 var movie = object && object.movie ? object.movie : currentMovie || {};
+                self.movie = movie;
                 self.container = jQuery('<div class="lr-screen"></div>');
                 self.create = function () {
                     var html = '<div class="lr-heading">Доступные источники</div>';
