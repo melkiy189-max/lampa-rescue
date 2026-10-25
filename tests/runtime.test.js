@@ -218,4 +218,46 @@ assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Пока н�
     'screen should show the empty-results message when no usable sources remain');
 emptyScreen.onDestroy();
 
-console.log('Runtime regression checks passed: provider validation, search ownership, callback-once, stale result isolation, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state.');
+// Rapidly switching between movies must isolate each search lifecycle and late response.
+const rapidCallbacks = [];
+api.registerProvider({
+    id: 'mock',
+    name: 'Rapid-switch source',
+    search: function (movie, done) {
+        rapidCallbacks.push({ movie, done });
+    }
+});
+api.registerProvider({
+    id: 'broken',
+    name: 'Immediate empty source',
+    search: function () {
+        return [];
+    }
+});
+
+const screenA = createComponent({ title: 'Rapid movie A', release_date: '2019-01-01' });
+const screenB = createComponent({ title: 'Rapid movie B', release_date: '2020-01-01' });
+const screenC = createComponent({ title: 'Rapid movie C', release_date: '2021-01-01' });
+assert.equal(rapidCallbacks.length, 3, 'each rapid movie switch should start its own request');
+
+// Late destruction events from older screens must not cancel the newest search.
+screenA.onDestroy();
+screenB.onDestroy();
+rapidCallbacks[2].done(null, [
+    { title: 'Movie C result', url: 'https://example.test/movie-c.mp4' }
+]);
+assert.equal(api.getResults().length, 1, 'latest search should keep its own result after older screens are destroyed');
+assert.equal(api.getResults()[0].title, 'Movie C result');
+
+// Responses arriving after cancellation must not pollute the current movie's results.
+rapidCallbacks[0].done(null, [
+    { title: 'Late movie A result', url: 'https://example.test/movie-a.mp4' }
+]);
+rapidCallbacks[1].done(null, [
+    { title: 'Late movie B result', url: 'https://example.test/movie-b.mp4' }
+]);
+assert.equal(api.getResults().length, 1, 'late results from previous searches must be ignored');
+assert.equal(api.getResults()[0].title, 'Movie C result');
+screenC.onDestroy();
+
+console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state.');
