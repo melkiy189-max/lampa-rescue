@@ -57,6 +57,7 @@
             '.lr-list{display:flex;flex-direction:column;gap:.5em}',
             '.lr-source{display:flex;align-items:center;gap:1em;padding:.9em 1em;border:2px solid rgba(130,160,210,.12);border-radius:.8em;background:rgba(15,28,52,.82);min-height:4.2em;cursor:pointer}',
             '.lr-source.focus{border-color:#1684ff;background:rgba(20,65,130,.55)}',
+            '.lr-source-logo{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:2.8em;height:2.8em;border-radius:.65em;background:linear-gradient(135deg,#087dff,#5625d8);font-size:1.15em;font-weight:800}',
             '.lr-source-name{font-size:1.05em;font-weight:700}',
             '.lr-source-detail{font-size:.82em;opacity:.68;margin-top:.25em}',
             '.lr-source-meta{display:flex;align-items:center;gap:.45em;flex-wrap:wrap;margin-left:auto}',
@@ -341,7 +342,7 @@
                 };
                 this.onDestroy = function () { cancelSearch(); };
                 this.start = function () {};
-                this.render = function () { return self.render; };
+                
             });
         }
 
