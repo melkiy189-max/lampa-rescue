@@ -147,6 +147,13 @@
     function cancelSearch() {
         if (!activeSearch) return;
         activeSearch.cancelled = true;
+        if (activeSearch.timer) clearTimeout(activeSearch.timer);
+        if (activeSearch.providerTimers) {
+            activeSearch.providerTimers.forEach(function (timer) {
+                clearTimeout(timer);
+            });
+            activeSearch.providerTimers = [];
+        }
         activeSearch = null;
     }
 
@@ -161,7 +168,8 @@
             pending: enabled.length,
             completed: 0,
             errors: 0,
-            timer: null
+            timer: null,
+            providerTimers: []
         };
         activeSearch = state;
 
@@ -224,6 +232,7 @@
                 settled = true;
                 finishOne(provider, new Error('Provider timeout'), []);
             }, SEARCH_TIMEOUT - 500);
+            state.providerTimers.push(localTimer);
 
             function done(error, items) {
                 if (settled) return;
