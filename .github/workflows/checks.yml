@@ -28,28 +28,7 @@ jobs:
           node --check lampa-rescue-core.js
           node --check lampa-rescue-filmix.js
           node --check lampa-rescue-experimental-bundle.js
+          node --check tests/check-source.js
 
-      - name: Check critical safety guards
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const assert = require('node:assert/strict');
-
-          const core = fs.readFileSync('lampa-rescue-core.js', 'utf8');
-          const filmix = fs.readFileSync('lampa-rescue-filmix.js', 'utf8');
-          const bundle = fs.readFileSync('lampa-rescue-experimental-bundle.js', 'utf8');
-
-          for (const [name, source] of [['core', core], ['bundle', bundle]]) {
-            assert.ok(source.includes('registerProvider'), name + ': provider registration API must remain');
-            assert.ok(source.includes('if (item.url && !/^https?:') && source.includes('.test(item.url)) return null;'), name + ': URL scheme guard must remain');
-            assert.ok(source.includes('var renderedResults = payload.results || [];'), name + ': result click handlers must use a render snapshot');
-          }
-
-          assert.ok(filmix.includes('if (!/^https:') && filmix.includes('.test(proxy)) return'), 'Filmix must reject non-HTTPS proxies');
-          assert.ok(filmix.includes("replace(/ё/g, 'е')"), 'Filmix title normalization must fold ё to е');
-
-          assert.ok(bundle.includes(core.trim()), 'bundle must include the exact current core');
-          assert.ok(bundle.includes(filmix.trim()), 'bundle must include the exact current Filmix adapter');
-
-          console.log('Critical static checks passed.');
-          NODE
+      - name: Run static regression checks
+        run: node tests/check-source.js
