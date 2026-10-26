@@ -80,12 +80,10 @@
                             title: 'Ссылка на публичное видео',
                             value: self.urlValue,
                             free: true,
-                            nomask: true,
-                            onBack: function () {},
-                            onSelect: function (value) {
-                                self.urlValue = String(value || '');
-                                self.container.find('.lr-host-url').text(self.urlValue || 'Ссылка не задана');
-                            }
+                            nomask: true
+                        }, function (value) {
+                            self.urlValue = String(value || '');
+                            self.container.find('.lr-host-url').text(self.urlValue || 'Ссылка не задана');
                         });
                     });
                     self.container.append('<div class="selector lr-host-open" style="margin-top:1em;padding:1em;background:rgba(255,255,255,.12);">Открыть встроенный плеер</div>');
