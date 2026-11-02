@@ -23,6 +23,10 @@ for (const [name, source] of [['core', core], ['bundle', bundle]]) {
         name + ': component teardown must cancel only its own search');
     assert.ok(source.includes('return state;'),
         name + ': searchAll must return its state to the component');
+    assert.ok(!/(?:^|[;{])\\s*gap\\s*:/.test(source),
+        name + ': avoid flex gap, which is unavailable in legacy WebViews');
+    assert.ok(source.includes('.lr-list>.lr-source+.lr-source{margin-top:.5em}'),
+        name + ': list spacing must use legacy-compatible margins');
 }
 
 assert.ok(filmix.includes('if (!/^https:') && filmix.includes('.test(proxy)) return'),
