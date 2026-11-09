@@ -316,4 +316,65 @@ assert.ok(contentNodes[contentNodes.length - 1].htmlValue.includes('Источн
     'screen should explain that no sources are configured');
 noProvidersScreen.onDestroy();
 
+// App-ready may fire before jQuery is exposed; bootstrap must keep retrying.
+const bootstrapIntervals = [];
+let bootstrapComponentAdds = 0;
+let bootstrapAppHandler = null;
+function delayedJQuery() {
+    return {
+        text: function () { return this; },
+        appendTo: function () { return this; }
+    };
+}
+const bootstrapWindow = {
+    appready: false,
+    Lampa: {
+        Listener: {
+            follow: function (name, callback) {
+                if (name === 'app') bootstrapAppHandler = callback;
+            }
+        },
+        Component: {
+            add: function () { bootstrapComponentAdds++; },
+            get: function () { return null; }
+        },
+        Activity: { push: function () {} }
+    }
+};
+const bootstrapSandbox = {
+    window: bootstrapWindow,
+    Lampa: bootstrapWindow.Lampa,
+    console: { log: function () {} },
+    setInterval: function (callback, delay) {
+        const timer = { callback: callback, delay: delay, active: true };
+        bootstrapIntervals.push(timer);
+        return timer;
+    },
+    clearInterval: function (timer) {
+        if (timer) timer.active = false;
+    },
+    setTimeout: function () { return 1; },
+    clearTimeout: function () {},
+    Math,
+    Array,
+    String,
+    Error,
+    parseInt,
+    isNaN
+};
+vm.runInNewContext(source, bootstrapSandbox, { timeout: 2000 });
+assert.equal(bootstrapIntervals.length, 1, 'missing jQuery should start the bootstrap retry');
+bootstrapWindow.appready = true;
+bootstrapIntervals[0].callback();
+assert.equal(typeof bootstrapAppHandler, 'function', 'bootstrap should subscribe to app-ready');
+bootstrapAppHandler({ type: 'ready' });
+assert.equal(bootstrapIntervals[0].active, true,
+    'app-ready before jQuery must not cancel the pending bootstrap retry');
+bootstrapWindow.jQuery = delayedJQuery;
+bootstrapSandbox.jQuery = delayedJQuery;
+if (bootstrapIntervals[0].active) bootstrapIntervals[0].callback();
+assert.equal(bootstrapIntervals[0].active, false, 'retry should stop after successful initialization');
+assert.equal(bootstrapComponentAdds, 1,
+    'core component should initialize when jQuery becomes available after app-ready');
+
 console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state, exact playback handoff, player-error notification, duplicate-load guard.');
