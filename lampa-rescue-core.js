@@ -427,6 +427,11 @@
         appListenerBound = true;
         window.Lampa.Listener.follow('app', function (event) {
             if (event && event.type === 'ready' && !initComplete) {
+                // Keep the bootstrap retry alive if app-ready fires before jQuery is available.
+                if (!window.Lampa || !window.Lampa.Listener || !window.jQuery) {
+                    bootstrap();
+                    return;
+                }
                 if (bootstrapTimer) {
                     clearInterval(bootstrapTimer);
                     bootstrapTimer = null;
