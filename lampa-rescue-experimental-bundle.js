@@ -380,7 +380,9 @@
                 };
                 self.onDestroy = function () { cancelSearch(self.searchState); };
                 self.start = function () {};
-                self.stop = function () { cancelSearch(self.searchState); };
+                // A stopped activity remains in the stack; keep its search alive.
+                // Pending results can be rendered when the user returns.
+                self.stop = function () {};
                 self.destroy = function () { cancelSearch(self.searchState); self.container.remove(); };
             });
         }

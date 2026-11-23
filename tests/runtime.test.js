@@ -377,4 +377,49 @@ assert.equal(bootstrapIntervals[0].active, false, 'retry should stop after succe
 assert.equal(bootstrapComponentAdds, 1,
     'core component should initialize when jQuery becomes available after app-ready');
 
-console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state, exact playback handoff, player-error notification, duplicate-load guard.');
+// Lampa calls stop() when another activity is pushed, but keeps this component in the stack.
+// The in-flight search must survive that pause and complete when the user returns.
+const lifecycleCallbacks = [];
+api.registerProvider({
+    id: 'mock',
+    name: 'Lifecycle source',
+    search: function (movie, done) {
+        lifecycleCallbacks.push(done);
+    }
+});
+api.registerProvider({
+    id: 'broken',
+    name: 'Lifecycle empty source',
+    search: function () {
+        return [];
+    }
+});
+const pausedScreen = createComponent({ title: 'Paused screen search', release_date: '2024-01-01' });
+assert.equal(lifecycleCallbacks.length, 1, 'paused screen should have one pending provider request');
+pausedScreen.stop();
+lifecycleCallbacks[0](null, [
+    { title: 'Result after returning to paused screen', url: 'https://example.test/paused.mp4' }
+]);
+assert.equal(api.getResults().length, 1, 'stop must not cancel an in-flight search');
+assert.equal(api.getResults()[0].title, 'Result after returning to paused screen',
+    'results received while paused should be available when the screen resumes');
+pausedScreen.destroy();
+
+// destroy() is the actual Activity teardown hook and must cancel pending work.
+const destroyCallbacks = [];
+api.registerProvider({
+    id: 'mock',
+    name: 'Destroy lifecycle source',
+    search: function (movie, done) {
+        destroyCallbacks.push(done);
+    }
+});
+const destroyedScreen = createComponent({ title: 'Destroyed screen search', release_date: '2025-01-01' });
+assert.equal(destroyCallbacks.length, 1, 'destroy test should have one pending provider request');
+destroyedScreen.destroy();
+destroyCallbacks[0](null, [
+    { title: 'Late result after destroy', url: 'https://example.test/destroyed.mp4' }
+]);
+assert.equal(api.getResults().length, 0, 'destroy must cancel pending work and ignore late results');
+
+console.log('Runtime regression checks passed: provider validation, search ownership, rapid movie switching, late-response isolation, callback-once, unsafe URL rejection, provider error isolation, URL deduplication, provider timeout isolation, empty-results state, no-enabled-providers state, exact playback handoff, player-error notification, duplicate-load guard, Activity stop/resume lifecycle, destroy cancellation.');
